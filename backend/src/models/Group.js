@@ -4,33 +4,25 @@ const groupSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: true
     },
-
-    organizerId: {
+    description: String,
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: true
     },
-
     members: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
+        ref: "User"
+      }
     ],
-
     inviteCode: {
       type: String,
-      required: true,
       unique: true,
-    },
-
-    status: {
-      type: String,
-      enum: ["active", "finalized"],
-      default: "active",
-    },
+      required: true
+    }
   },
   { timestamps: true }
 );
