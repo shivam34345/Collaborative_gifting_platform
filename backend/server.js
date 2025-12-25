@@ -15,6 +15,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/api/groups", groupRoutes);
+app.use("/suggestion", require("./src/routes/suggestionRoutes"));
+
 
 // Connect Database
 connectDB();

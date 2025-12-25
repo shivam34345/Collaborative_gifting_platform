@@ -2,29 +2,29 @@ const mongoose = require("mongoose");
 
 const giftSuggestionSchema = new mongoose.Schema(
   {
-    groupId: {
+    group: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Group",
-      required: true
+      required: true,
+    },
+    suggestedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     title: {
       type: String,
-      required: true
+      required: true,
     },
     description: {
-      type: String
-    },
-    proposedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true
+      type: String,
     },
     votes: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-      }
-    ]
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -15,8 +15,8 @@ const createGroup = async (req, res) => {
     const group = await Group.create({
       name,
       description,
-      createdBy: req.user._id,
-      members: [req.user._id],
+      createdBy: req.user._id,       // ✅ FIX
+      members: [req.user._id],       // ✅ FIX
       inviteCode
     });
 
@@ -25,7 +25,7 @@ const createGroup = async (req, res) => {
       group
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -35,25 +35,45 @@ const joinGroup = async (req, res) => {
     const { inviteCode } = req.body;
 
     const group = await Group.findOne({ inviteCode });
-
     if (!group) {
       return res.status(404).json({ message: "Invalid invite code" });
     }
 
-    if (group.members.includes(req.user._id)) {
+    const isMember = group.members.some(
+      (memberId) => memberId.toString() === req.user._id.toString()
+    );
+
+    if (isMember) {
       return res.status(400).json({ message: "Already a member" });
     }
 
-    group.members.push(req.user._id);
+    group.members.push(req.user._id);   // ✅ FIX
     await group.save();
 
-    res.status(200).json({
+    res.json({
       message: "Joined group successfully",
       group
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = { createGroup, joinGroup };
+// GET MY GROUPS
+const getMyGroups = async (req, res) => {
+  try {
+    const groups = await Group.find({
+      members: req.user._id           // ✅ FIX
+    }).select("_id name description inviteCode");
+
+    res.json(groups);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  createGroup,
+  joinGroup,
+  getMyGroups
+};
