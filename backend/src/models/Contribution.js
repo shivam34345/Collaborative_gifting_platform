@@ -2,32 +2,40 @@ const mongoose = require("mongoose");
 
 const contributionSchema = new mongoose.Schema(
   {
-    groupId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
-      required: true
-    },
-    userId: {
+    user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
+
+    group: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Group",
+      required: true,
+    },
+
     amount: {
       type: Number,
-      required: true
+      required: true,
+      min: 1,
     },
+
     status: {
       type: String,
       enum: ["pending", "paid", "confirmed"],
-      default: "pending"
+      default: "pending",
     },
-    paymentMethod: {
-      type: String,
-      enum: ["UPI", "manual"],
-      default: "UPI"
-    }
+
+    paymentNote: {
+      type: String, // optional UPI note / reference
+    },
   },
   { timestamps: true }
 );
+
+/**
+ * Ensure one contribution per user per group
+ */
+contributionSchema.index({ user: 1, group: 1 }, { unique: true });
 
 module.exports = mongoose.model("Contribution", contributionSchema);

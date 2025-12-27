@@ -22,7 +22,12 @@ const groupSchema = new mongoose.Schema(
       type: String,
       unique: true,
       required: true
-    }
+    },
+    organizerUpi: {
+  type: String,
+  required: true,
+},
+
   },
   { timestamps: true }
 );

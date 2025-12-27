@@ -7,6 +7,7 @@ const connectDB = require("./src/config/db");
 // Route imports
 const authRoutes = require("./src/routes/authRoutes");
 const groupRoutes = require("./src/routes/groupRoutes");
+const contributionRoutes = require("./src/routes/contributionRoutes");
 
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/groups", groupRoutes);
 app.use("/suggestion", require("./src/routes/suggestionRoutes"));
+app.use("/api/contribution", contributionRoutes);
 
 
 // Connect Database
