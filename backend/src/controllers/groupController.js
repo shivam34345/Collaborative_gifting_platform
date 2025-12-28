@@ -82,8 +82,28 @@ const getMyGroups = async (req, res) => {
   }
 };
 
+// ============================
+// GET SINGLE GROUP BY ID
+// ============================
+const getGroupById = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id)
+      .populate("members", "name email");
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    res.json(group);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 module.exports = {
   createGroup,
   joinGroup,
   getMyGroups,
+  getGroupById
 };

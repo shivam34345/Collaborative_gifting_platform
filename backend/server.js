@@ -8,7 +8,7 @@ const connectDB = require("./src/config/db");
 const authRoutes = require("./src/routes/authRoutes");
 const groupRoutes = require("./src/routes/groupRoutes");
 const contributionRoutes = require("./src/routes/contributionRoutes");
-
+const giftRoutes = require("./src/routes/giftRoutes");
 
 const app = express();
 
@@ -18,6 +18,7 @@ app.use(express.json());
 app.use("/api/groups", groupRoutes);
 app.use("/suggestion", require("./src/routes/suggestionRoutes"));
 app.use("/api/contribution", contributionRoutes);
+app.use("/api/gifts", giftRoutes);
 
 
 // Connect Database

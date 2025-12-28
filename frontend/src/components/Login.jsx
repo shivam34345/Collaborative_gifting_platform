@@ -7,12 +7,23 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    const res = await API.post("/api/auth/login", { email, password });
-    localStorage.setItem("token", res.data.token);
-    navigate("/dashboard");
-  };
+ const handleLogin = async (e) => {
+  e.preventDefault();
+
+  const res = await API.post("/api/auth/login", {
+    email,
+    password,
+  });
+
+  // store token
+  localStorage.setItem("token", res.data.token);
+
+  // 🔥 store user info
+  localStorage.setItem("user", JSON.stringify(res.data.user));
+
+  navigate("/dashboard");
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
