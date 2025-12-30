@@ -1,172 +1,114 @@
 const Contribution = require("../models/Contribution");
 const Group = require("../models/Group");
 
-/**
- * @desc    Add contribution amount
- * @route   POST /api/contribution/add
- * @access  Private (Group Members Only)
- */
-exports.addContribution = async (req, res) => {
+// ============================
+// GET ALL CONTRIBUTIONS OF A GROUP
+// ============================
+exports.getGroupContributions = async (req, res) => {
   try {
-    const { groupId, amount } = req.body;
+    const contributions = await Contribution.find({
+      group: req.params.groupId,
+    })
+      .populate("user", "name email")
+      .sort({ createdAt: 1 });
 
-    // Basic validation
-    if (!groupId || amount === undefined) {
-      return res
-        .status(400)
-        .json({ message: "Group ID and amount are required" });
-    }
-
-    if (amount <= 0) {
-      return res
-        .status(400)
-        .json({ message: "Amount must be greater than zero" });
-    }
-
-    // Check if group exists
-    const group = await Group.findById(groupId);
-    if (!group) {
-      return res.status(404).json({ message: "Group not found" });
-    }
-
-    // Check if user is a group member
-    const isMember = group.members.some(
-      (memberId) => memberId.toString() === req.user._id.toString()
-    );
-    if (!isMember) {
-      return res
-        .status(403)
-        .json({ message: "You are not a member of this group" });
-    }
-
-    // Create contribution
-    const contribution = await Contribution.create({
-      user: req.user._id,
-      group: groupId,
-      amount,
-    });
-
-    res.status(201).json({
-      message: "Contribution added successfully",
-      contribution,
-    });
+    res.json(contributions);
   } catch (error) {
-    // Duplicate contribution (unique index: user + group)
-    if (error.code === 11000) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// ADD PAYMENT PROOF (USER)
+// ============================
+exports.addPaymentProof = async (req, res) => {
+  try {
+    const { paymentProof } = req.body;
+
+    if (!paymentProof || paymentProof.trim().length < 3) {
       return res.status(400).json({
-        message: "You have already contributed to this group",
+        message: "Valid payment proof is required",
       });
     }
 
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
+    const contribution = await Contribution.findById(req.params.id);
 
-/**
- * @desc    Generate UPI payment URL for a contribution
- * @route   GET /api/contribution/:id/upi-link
- * @access  Private (Contributor only)
- */
-exports.getUpiPaymentLink = async (req, res) => {
-  try {
-    const contributionId = req.params.id;
-
-    // Fetch contribution
-    const contribution = await Contribution.findById(contributionId);
     if (!contribution) {
       return res.status(404).json({ message: "Contribution not found" });
     }
 
-    // Only contributor can generate payment link
-    if (contribution.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
-
-    // Fetch group
-    const group = await Group.findById(contribution.group);
-    if (!group || !group.organizerUpi) {
-      return res
-        .status(400)
-        .json({ message: "Organizer UPI not available" });
-    }
-
-    const amount = contribution.amount;
-    const upiId = group.organizerUpi;
-    const note = `${group.name} Gift`;
-
-    // Generate UPI deep link
-    const upiUrl = `upi://pay?pa=${upiId}&pn=Gift Organizer&am=${amount}&tn=${encodeURIComponent(
-      note
-    )}`;
-
-    res.json({ upiUrl });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-/**
- * @desc    Mark contribution as paid (user confirmation)
- * @route   PATCH /api/contribution/:id/mark-paid
- * @access  Private (Contributor only)
- */
-exports.markContributionAsPaid = async (req, res) => {
-  try {
-    const contributionId = req.params.id;
-    const { paymentNote } = req.body;
-
-    const contribution = await Contribution.findById(contributionId);
-    if (!contribution) {
-      return res.status(404).json({ message: "Contribution not found" });
-    }
-
-    // Only contributor can mark as paid
+    // 🔐 Only owner can add proof
     if (contribution.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized" });
     }
 
     if (contribution.status !== "pending") {
-      return res
-        .status(400)
-        .json({ message: "Contribution cannot be marked as paid" });
+      return res.status(400).json({
+        message: "Cannot add proof after marking paid",
+      });
     }
 
-    contribution.status = "paid";
-    if (paymentNote) {
-      contribution.paymentNote = paymentNote;
-    }
+    contribution.paymentProof = paymentProof;
+    contribution.paidAt = new Date();
 
     await contribution.save();
 
     res.json({
-      message: "Contribution marked as paid",
+      message: "Payment proof added",
       contribution,
     });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-/**
- * @desc    Organizer confirms contribution payment
- * @route   PATCH /api/contribution/:id/confirm
- * @access  Private (Organizer only)
- */
-exports.confirmContribution = async (req, res) => {
+// ============================
+// MARK AS PAID (USER)
+// ============================
+exports.markAsPaid = async (req, res) => {
   try {
-    const contributionId = req.params.id;
+    const contribution = await Contribution.findById(req.params.id);
 
-    const contribution = await Contribution.findById(contributionId);
     if (!contribution) {
       return res.status(404).json({ message: "Contribution not found" });
     }
 
-    if (contribution.status !== "paid") {
-      return res
-        .status(400)
-        .json({ message: "Only paid contributions can be confirmed" });
+    if (contribution.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    if (!contribution.paymentProof) {
+      return res.status(400).json({
+        message: "Add payment proof first",
+      });
+    }
+
+    if (contribution.status !== "pending") {
+      return res.status(400).json({
+        message: "Contribution already marked",
+      });
+    }
+
+    contribution.status = "paid";
+    await contribution.save();
+
+    res.json({
+      message: "Marked as paid, awaiting organizer confirmation",
+      contribution,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ============================
+// CONFIRM PAYMENT (ORGANIZER)
+// ============================
+exports.confirmPayment = async (req, res) => {
+  try {
+    const contribution = await Contribution.findById(req.params.id);
+    if (!contribution) {
+      return res.status(404).json({ message: "Contribution not found" });
     }
 
     const group = await Group.findById(contribution.group);
@@ -174,22 +116,29 @@ exports.confirmContribution = async (req, res) => {
       return res.status(404).json({ message: "Group not found" });
     }
 
-    // Only organizer can confirm
+    // 🔐 Only organizer
     if (group.createdBy.toString() !== req.user._id.toString()) {
-      return res
-        .status(403)
-        .json({ message: "Only organizer can confirm payments" });
+      return res.status(403).json({
+        message: "Only organizer can confirm payments",
+      });
+    }
+
+    if (contribution.status !== "paid") {
+      return res.status(400).json({
+        message: "Only paid contributions can be confirmed",
+      });
     }
 
     contribution.status = "confirmed";
+    contribution.confirmedAt = new Date();
+
     await contribution.save();
 
     res.json({
-      message: "Contribution confirmed successfully",
+      message: "Payment confirmed",
       contribution,
     });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };

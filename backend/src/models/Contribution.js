@@ -26,16 +26,23 @@ const contributionSchema = new mongoose.Schema(
       default: "pending",
     },
 
-    paymentNote: {
-      type: String, // optional UPI note / reference
+    paymentProof: {
+      type: String, // UPI reference / note
+      trim: true,
+    },
+
+    paidAt: {
+      type: Date,
+    },
+
+    confirmedAt: {
+      type: Date,
     },
   },
   { timestamps: true }
 );
 
-/**
- * Ensure one contribution per user per group
- */
+// 🔒 One contribution per user per group
 contributionSchema.index({ user: 1, group: 1 }, { unique: true });
 
 module.exports = mongoose.model("Contribution", contributionSchema);

@@ -1,20 +1,17 @@
 const express = require("express");
 const router = express.Router();
-
 const protect = require("../middleware/authMiddleware");
+
 const {
-  addContribution,
-   getUpiPaymentLink,
-   markContributionAsPaid,
-    confirmContribution,
+  getGroupContributions,
+  addPaymentProof,
+  markAsPaid,
+  confirmPayment,
 } = require("../controllers/contributionController");
 
-router.post("/add", protect, addContribution);
-router.get("/:id/upi-link", protect, getUpiPaymentLink);
-router.patch("/:id/mark-paid", protect, markContributionAsPaid);
-router.patch("/:id/confirm", protect, confirmContribution);
-
-
-
+router.get("/:groupId", protect, getGroupContributions);
+router.patch("/:id/proof", protect, addPaymentProof);
+router.patch("/:id/mark-paid", protect, markAsPaid);
+router.patch("/:id/confirm", protect, confirmPayment);
 
 module.exports = router;

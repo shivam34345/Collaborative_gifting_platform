@@ -6,10 +6,10 @@ import CreateGroupPage from "./pages/CreateGroupPage";
 import MyGroupsPage from "./pages/MyGroupsPage";
 import JoinGroupPage from "./pages/JoinGroupPage";
 import GroupPage from "./pages/GroupPage";
-
+import ContributionPage from "./pages/ContributionPage";
 function App() {
   return (
-    <BrowserRouter>
+  
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
@@ -18,10 +18,14 @@ function App() {
         <Route path="/groups" element={<MyGroupsPage />} />
         <Route path="/join-group" element={<JoinGroupPage />} />
         <Route path="/groups/:groupId" element={<GroupPage />} />
+        <Route
+          path="/groups/:groupId/contributions"
+          element={<ContributionPage />}
+        />
 
 
       </Routes>
-    </BrowserRouter>
+  
   );
 }
 

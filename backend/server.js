@@ -10,30 +10,29 @@ const groupRoutes = require("./src/routes/groupRoutes");
 const contributionRoutes = require("./src/routes/contributionRoutes");
 const giftRoutes = require("./src/routes/giftRoutes");
 
+
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use("/api/groups", groupRoutes);
-app.use("/suggestion", require("./src/routes/suggestionRoutes"));
-app.use("/api/contribution", contributionRoutes);
-app.use("/api/gifts", giftRoutes);
-
 
 // Connect Database
 connectDB();
+
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/groups", groupRoutes);
+app.use("/api/gifts", giftRoutes);
+app.use("/api/contribution", contributionRoutes);
+
 
 // Test route
 app.get("/", (req, res) => {
   res.send("Collaborative Gifting API running");
 });
 
-// 🔐 Auth routes
-app.use("/api/auth", authRoutes);
-
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

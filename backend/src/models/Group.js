@@ -27,6 +27,16 @@ const groupSchema = new mongoose.Schema(
   type: String,
   required: true,
 },
+finalGift: {
+  type: mongoose.Schema.Types.ObjectId,
+      ref: "Gift", // MUST match your gift model name
+      default: null,
+},
+paymentOpen: {
+  type: Boolean,
+  default: false,
+},
+
 
   },
   { timestamps: true }
