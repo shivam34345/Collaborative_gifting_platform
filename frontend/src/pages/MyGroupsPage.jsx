@@ -5,9 +5,14 @@ import API from "../services/api";
 
 const MyGroupsPage = () => {
   const navigate = useNavigate();
+
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ get logged-in user
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  // ✅ fetch groups
   useEffect(() => {
     const fetchGroups = async () => {
       try {
@@ -28,6 +33,28 @@ const MyGroupsPage = () => {
 
     fetchGroups();
   }, []);
+
+  // ✅ delete handler (OUTSIDE useEffect)
+  const handleDeleteGroup = async (groupId) => {
+    const confirmDelete = window.confirm(
+      "Are you sure? This will permanently delete the group for all members."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await API.delete(`/api/groups/${groupId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      // remove from UI instantly
+      setGroups((prev) => prev.filter((g) => g._id !== groupId));
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to delete group");
+    }
+  };
 
   return (
     <>
@@ -83,12 +110,23 @@ const MyGroupsPage = () => {
                 </p>
               </div>
 
+              {/* Open Group */}
               <button
                 onClick={() => navigate(`/groups/${group._id}`)}
                 className="mt-6 bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 transition"
               >
                 Open Group
               </button>
+
+              {/* Delete Group – organizer only */}
+              {group.createdBy === user?._id && (
+                <button
+                  onClick={() => handleDeleteGroup(group._id)}
+className="mt-3 mx-auto block bg-red-500 text-white text-xs px-4 py-1 rounded-full hover:bg-red-600 transition"
+                >
+                  Delete Group
+                </button>
+              )}
             </div>
           ))}
         </div>

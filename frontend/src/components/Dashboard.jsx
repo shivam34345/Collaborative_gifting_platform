@@ -1,12 +1,48 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 import StatCard from "./StatCard";
 import ActionCard from "./ActionCard";
+import API from "../services/api";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
+
+  const [joinedGroups, setJoinedGroups] = useState(0);
+  const [activeGroups, setActiveGroups] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGroupStats = async () => {
+      try {
+        const res = await API.get("/api/groups/my-groups", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        const groups = res.data;
+        console.log("Groups from backend:", groups);
+
+
+        setJoinedGroups(groups.length);
+
+        // Active = payment started
+        const active = groups.filter(
+          (group) => group.paymentOpen === true
+        ).length;
+
+        setActiveGroups(active);
+      } catch (error) {
+        console.error("Failed to load dashboard stats", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroupStats();
+  }, []);
 
   return (
     <>
@@ -29,12 +65,12 @@ const Dashboard = () => {
         <div className="flex gap-16 mt-12 mb-16">
           <StatCard
             label="Joined Groups"
-            value="4"
+            value={loading ? "—" : joinedGroups}
             color="text-pink-600"
           />
           <StatCard
             label="Active Groups"
-            value="2"
+            value={loading ? "—" : activeGroups}
             color="text-purple-600"
           />
         </div>

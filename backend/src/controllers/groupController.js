@@ -1,6 +1,7 @@
 const Group = require("../models/Group");
 const Contribution = require("../models/Contribution");
 const crypto = require("crypto");
+const Gift = require("../models/Gift");
 
 // ============================
 // CREATE GROUP
@@ -74,7 +75,7 @@ const getMyGroups = async (req, res) => {
   try {
     const groups = await Group.find({
       members: req.user._id,
-    }).select("_id name description inviteCode organizerUpi");
+    }).select("_id name description inviteCode organizerUpi paymentOpen");
 
     res.json(groups);
   } catch (error) {
@@ -232,6 +233,32 @@ const undoConfirmGift = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+const deleteGroup = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.groupId);
+
+    if (!group) {
+      return res.status(404).json({ message: "Group not found" });
+    }
+
+    // Organizer-only permission
+    if (group.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Only organizer can delete this group" });
+    }
+
+    // 🔥 HARD DELETE all related data
+    await Contribution.deleteMany({ group: group._id });
+    await Gift.deleteMany({ group: group._id });
+
+    // 🔥 HARD DELETE the group itself
+    await Group.findByIdAndDelete(group._id);
+
+    return res.json({ message: "Group permanently deleted" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to delete group" });
+  }
+};
 
 module.exports = {
   createGroup,
@@ -241,4 +268,5 @@ module.exports = {
   confirmGift,
   openPayment,
   undoConfirmGift,
+  deleteGroup,
 };
