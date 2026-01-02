@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../services/api";
-import Navbar from "../components/Navbar";
+
 
 const ContributionPage = () => {
   const { groupId } = useParams();
@@ -31,7 +31,7 @@ const ContributionPage = () => {
         API.get(`/api/groups/${groupId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        API.get(`/api/contribution/${groupId}`, {
+        API.get(`/api/contributions/${groupId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -120,7 +120,7 @@ const ContributionPage = () => {
 
   return (
     <>
-      <Navbar />
+      
 
       <div className="min-h-screen bg-gray-100 px-6 py-10">
         <div className="max-w-5xl mx-auto space-y-8">
@@ -145,6 +145,13 @@ const ContributionPage = () => {
                 {group.members.length} members participating
               </p>
             </div>
+            {/* ✅ SUCCESS MESSAGE (RHS) */}
+  {collectedAmount === totalAmount && totalAmount > 0 && (
+    <div className="text-green-600 font-semibold text-sm text-right ml-auto">
+      ✅ Total contribution completed <br />
+      Product will be ordered by the organizer
+    </div>
+  )}
           </div>
 
           {/* PROGRESS */}

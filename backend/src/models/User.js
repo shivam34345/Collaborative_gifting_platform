@@ -2,30 +2,35 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
+    
+
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      unique: true,
     },
+
     email: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, "Please use a valid email"]
-
+      match: [/^\S+@\S+\.\S+$/, "Please use a valid email"],
     },
+
     password: {
       type: String,
       required: true,
-       select: false
+      select: false,
     },
+
     groups: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Group"
-      }
-    ]
+        ref: "Group",
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+
 import API from "../services/api";
 
 const MyGroupsPage = () => {
@@ -58,7 +58,7 @@ const MyGroupsPage = () => {
 
   return (
     <>
-      <Navbar />
+     
 
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-pink-50 to-purple-100 px-6 py-16">
         <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">

@@ -9,6 +9,8 @@ const authRoutes = require("./src/routes/authRoutes");
 const groupRoutes = require("./src/routes/groupRoutes");
 const contributionRoutes = require("./src/routes/contributionRoutes");
 const giftRoutes = require("./src/routes/giftRoutes");
+const userRoutes = require("./src/routes/userRoutes");
+const groupChatRoutes = require("./src/routes/groupChatRoutes");
 
 
 const app = express();
@@ -24,8 +26,9 @@ connectDB();
 app.use("/api/auth", authRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/gifts", giftRoutes);
-app.use("/api/contribution", contributionRoutes);
-
+app.use("/api/contributions", contributionRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/chat", groupChatRoutes);
 
 // Test route
 app.get("/", (req, res) => {

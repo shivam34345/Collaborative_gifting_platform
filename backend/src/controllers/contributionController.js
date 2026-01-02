@@ -4,7 +4,7 @@ const Group = require("../models/Group");
 // ============================
 // GET ALL CONTRIBUTIONS OF A GROUP
 // ============================
-exports.getGroupContributions = async (req, res) => {
+const getGroupContributions = async (req, res) => {
   try {
     const contributions = await Contribution.find({
       group: req.params.groupId,
@@ -21,7 +21,7 @@ exports.getGroupContributions = async (req, res) => {
 // ============================
 // ADD PAYMENT PROOF (USER)
 // ============================
-exports.addPaymentProof = async (req, res) => {
+const addPaymentProof = async (req, res) => {
   try {
     const { paymentProof } = req.body;
 
@@ -32,12 +32,10 @@ exports.addPaymentProof = async (req, res) => {
     }
 
     const contribution = await Contribution.findById(req.params.id);
-
     if (!contribution) {
       return res.status(404).json({ message: "Contribution not found" });
     }
 
-    // 🔐 Only owner can add proof
     if (contribution.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Not authorized" });
     }
@@ -50,13 +48,9 @@ exports.addPaymentProof = async (req, res) => {
 
     contribution.paymentProof = paymentProof;
     contribution.paidAt = new Date();
-
     await contribution.save();
 
-    res.json({
-      message: "Payment proof added",
-      contribution,
-    });
+    res.json({ message: "Payment proof added", contribution });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
@@ -65,10 +59,9 @@ exports.addPaymentProof = async (req, res) => {
 // ============================
 // MARK AS PAID (USER)
 // ============================
-exports.markAsPaid = async (req, res) => {
+const markAsPaid = async (req, res) => {
   try {
     const contribution = await Contribution.findById(req.params.id);
-
     if (!contribution) {
       return res.status(404).json({ message: "Contribution not found" });
     }
@@ -78,15 +71,11 @@ exports.markAsPaid = async (req, res) => {
     }
 
     if (!contribution.paymentProof) {
-      return res.status(400).json({
-        message: "Add payment proof first",
-      });
+      return res.status(400).json({ message: "Add payment proof first" });
     }
 
     if (contribution.status !== "pending") {
-      return res.status(400).json({
-        message: "Contribution already marked",
-      });
+      return res.status(400).json({ message: "Already marked" });
     }
 
     contribution.status = "paid";
@@ -104,7 +93,7 @@ exports.markAsPaid = async (req, res) => {
 // ============================
 // CONFIRM PAYMENT (ORGANIZER)
 // ============================
-exports.confirmPayment = async (req, res) => {
+const confirmPayment = async (req, res) => {
   try {
     const contribution = await Contribution.findById(req.params.id);
     if (!contribution) {
@@ -116,7 +105,6 @@ exports.confirmPayment = async (req, res) => {
       return res.status(404).json({ message: "Group not found" });
     }
 
-    // 🔐 Only organizer
     if (group.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message: "Only organizer can confirm payments",
@@ -131,14 +119,46 @@ exports.confirmPayment = async (req, res) => {
 
     contribution.status = "confirmed";
     contribution.confirmedAt = new Date();
-
     await contribution.save();
 
-    res.json({
-      message: "Payment confirmed",
-      contribution,
-    });
+    res.json({ message: "Payment confirmed", contribution });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
+};
+
+// ============================
+// GET MY TOTAL CONTRIBUTIONS
+// ============================
+const getMyTotalContributions = async (req, res) => {
+  try {
+    const contributions = await Contribution.find({
+      user: req.user._id,
+    }).populate("group", "name");
+
+    const grouped = {};
+    contributions.forEach((c) => {
+      const name = c.group?.name || "Unknown Group";
+      grouped[name] = (grouped[name] || 0) + c.amount;
+    });
+
+    res.json({
+      email: req.user.email,
+      groups: Object.entries(grouped).map(([groupName, amount]) => ({
+        groupName,
+        amount,
+      })),
+      total: Object.values(grouped).reduce((a, b) => a + b, 0),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  getGroupContributions,
+  addPaymentProof,
+  markAsPaid,
+  confirmPayment,
+  getMyTotalContributions,
 };

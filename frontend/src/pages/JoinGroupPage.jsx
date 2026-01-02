@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+
 import API from "../services/api";
 
 const JoinGroupPage = () => {
@@ -40,7 +40,7 @@ const JoinGroupPage = () => {
 
   return (
     <>
-      <Navbar />
+    
 
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-pink-50 to-purple-100 flex justify-center items-center px-4">
 

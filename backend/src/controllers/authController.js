@@ -90,8 +90,24 @@ const user = await User.findOne({ email }).select("+password");
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+/**
+ * @desc    Get logged-in user profile
+ * @route   GET /api/auth/me
+ * @access  Private
+ */
+const getMe = async (req, res) => {
+  res.json({
+    _id: req.user._id,
+    name: req.user.name,
+    username: req.user.username,
+    email: req.user.email,
+  });
+};
+
 
 module.exports = {
   registerUser,
-  loginUser
+  loginUser,
+  getMe,
+
 };

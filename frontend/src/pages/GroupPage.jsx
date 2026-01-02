@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
+
 import API from "../services/api";
 
 /* -------- helper: get userId from JWT -------- */
@@ -36,6 +36,39 @@ const GroupPage = () => {
 
   const token = localStorage.getItem("token");
   const currentUserId = getUserIdFromToken();
+
+  const [messages, setMessages] = useState([]);
+const [newMessage, setNewMessage] = useState("");
+
+const fetchMessages = async () => {
+  const res = await API.get(`/api/chat/${groupId}/messages`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+  setMessages(res.data);
+};
+
+useEffect(() => {
+  fetchMessages();
+}, []);
+
+const sendMessage = async () => {
+  if (!newMessage.trim()) return;
+
+  const res = await API.post(
+    `/api/chat/${groupId}/messages`,
+    { text: newMessage },
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    }
+  );
+
+  setMessages((prev) => [...prev, res.data]);
+  setNewMessage("");
+};
 
   /* -------- fetch group -------- */
   const fetchGroup = async () => {
@@ -137,7 +170,7 @@ const GroupPage = () => {
   if (loading) {
     return (
       <>
-        <Navbar />
+     
         <div className="min-h-screen flex items-center justify-center">
           Loading...
         </div>
@@ -148,7 +181,7 @@ const GroupPage = () => {
   if (!group) {
     return (
       <>
-        <Navbar />
+      
         <div className="min-h-screen flex items-center justify-center">
           Group not found
         </div>
@@ -165,7 +198,7 @@ const GroupPage = () => {
 
   return (
     <>
-      <Navbar />
+     
 
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-pink-50 to-purple-100 px-6 py-12">
 
@@ -235,6 +268,46 @@ const GroupPage = () => {
             </div>
           </div>
         </div>
+        {/* 💬 GROUP CHAT */}
+<div className="bg-blue-50 border border-blue-200 rounded-lg shadow 
+                p-3 mt-6 mb-5 w-[130%] max-w-2xl mx-auto m-2">
+  <h3 className="text-sm font-semibold mb-2 text-blue-900 text-center">
+    Group Chat
+  </h3>
+
+  <div className="h-40 overflow-y-auto border rounded p-2 space-y-1 mb-2 text-sm bg-white">
+    {messages.map((msg) => (
+      <div key={msg._id}>
+        <span className="font-medium">{msg.sender.name}</span>
+        <span className="text-gray-400 text-xs ml-1">
+          {new Date(msg.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+        <p className="text-gray-700 leading-snug">
+          {msg.text}
+        </p>
+      </div>
+    ))}
+  </div>
+
+  <div className="flex gap-2">
+    <input
+      value={newMessage}
+      onChange={(e) => setNewMessage(e.target.value)}
+      className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none"
+      placeholder="Type a message…"
+    />
+    <button
+      onClick={sendMessage}
+      className="bg-blue-500 hover:bg-blue-900 text-white px-3 text-sm rounded"
+    >
+      Send
+    </button>
+  </div>
+</div>
+
 
         {/* SUGGEST + SUMMARY */}
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
