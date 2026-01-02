@@ -2,27 +2,30 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../services/api";
 
-
 const ContributionPage = () => {
   const { groupId } = useParams();
   const token = localStorage.getItem("token");
-
   const userId = JSON.parse(atob(token.split(".")[1])).id;
 
   const [group, setGroup] = useState(null);
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const isOrganizer = !!group && group.createdBy === userId;
+  // Amount setup
+  const [showAmountModal, setShowAmountModal] = useState(false);
+  const [totalContributionAmount, setTotalContributionAmount] = useState(null);
+  const [inputAmount, setInputAmount] = useState("");
 
-  // Modal state
+  // Payment modal
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState(null);
   const [upiRef, setUpiRef] = useState("");
 
+  const isOrganizer = group && group.createdBy === userId;
+
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, []);
 
   const fetchData = async () => {
@@ -38,6 +41,18 @@ const ContributionPage = () => {
 
       setGroup(groupRes.data);
       setContributions(contributionRes.data);
+
+      // One-time total amount check (per group)
+      const savedAmount = localStorage.getItem(
+        `totalAmount_${groupRes.data._id}`
+      );
+
+      if (savedAmount) {
+        setTotalContributionAmount(Number(savedAmount));
+      } else {
+        setShowAmountModal(true);
+      }
+
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -45,16 +60,32 @@ const ContributionPage = () => {
     }
   };
 
+  /* ================= SET TOTAL AMOUNT ================= */
+  const handleSetAmount = () => {
+    const amount = Number(inputAmount);
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    setTotalContributionAmount(amount);
+    localStorage.setItem(`totalAmount_${group._id}`, amount);
+    setShowAmountModal(false);
+  };
+
+  /* ================= PAY NOW ================= */
   const handlePayNow = (contribution) => {
     setSelectedContribution(contribution);
     setShowPaymentModal(true);
 
     if (group?.organizerUpi) {
-      const upiUrl = `upi://pay?pa=${group.organizerUpi}&pn=Gift Organizer&am=${contribution.amount}&cu=INR&tn=Gift Contribution`;
+      const upiUrl = `upi://pay?pa=${group.organizerUpi}&pn=Gift Organizer&am=${perMemberAmount}&cu=INR&tn=Gift Contribution`;
       window.location.href = upiUrl;
     }
   };
 
+  /* ================= MARK PAID ================= */
   const handleMarkAsPaid = async () => {
     if (!upiRef.trim()) {
       alert("Please enter UPI reference ID");
@@ -63,13 +94,13 @@ const ContributionPage = () => {
 
     try {
       await API.patch(
-        `/api/contribution/${selectedContribution._id}/proof`,
+        `/api/contributions/${selectedContribution._id}/proof`,
         { paymentProof: upiRef },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       await API.patch(
-        `/api/contribution/${selectedContribution._id}/mark-paid`,
+        `/api/contributions/${selectedContribution._id}/mark-paid`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -84,15 +115,17 @@ const ContributionPage = () => {
     }
   };
 
+  /* ================= CONFIRM PAYMENT ================= */
   const handleConfirmPayment = async (contributionId) => {
-    if (!window.confirm("Confirm this payment? This cannot be undone.")) return;
+    if (!window.confirm("Confirm this payment?")) return;
 
     try {
       await API.patch(
-        `/api/contribution/${contributionId}/confirm`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  `/api/contributions/${contributionId}/confirm`,
+  { amount: perMemberAmount }, // 🔥 REQUIRED
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
       fetchData();
     } catch (error) {
       console.error(error);
@@ -110,18 +143,55 @@ const ContributionPage = () => {
     return <div className="p-10 text-center">Loading...</div>;
   }
 
-  const totalAmount = contributions.reduce((sum, c) => sum + c.amount, 0);
+  /* ================= CALCULATIONS ================= */
+  const totalAmount = totalContributionAmount || 0;
+
+  const perMemberAmount =
+    group.members.length > 0
+      ? Math.ceil(totalAmount / group.members.length)
+      : 0;
+
   const collectedAmount = contributions
-    .filter((c) => c.status !== "pending")
-    .reduce((sum, c) => sum + c.amount, 0);
+  .filter((c) => c.status === "confirmed")
+  .length * perMemberAmount;
+
 
   const progressPercent =
     totalAmount === 0 ? 0 : (collectedAmount / totalAmount) * 100;
 
   return (
     <>
-      
+      {/* ================= SET TOTAL AMOUNT MODAL ================= */}
+      {showAmountModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-3 text-center">
+              Set Total Contribution Amount
+            </h2>
 
+            <p className="text-sm text-gray-600 text-center mb-4">
+              This amount will be equally split among all members.
+            </p>
+
+            <input
+              type="number"
+              placeholder="Enter total amount (₹)"
+              className="border px-3 py-2 rounded w-full mb-4"
+              value={inputAmount}
+              onChange={(e) => setInputAmount(e.target.value)}
+            />
+
+            <button
+              onClick={handleSetAmount}
+              className="bg-purple-600 text-white w-full py-2 rounded-full"
+            >
+              Confirm Amount
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MAIN PAGE ================= */}
       <div className="min-h-screen bg-gray-100 px-6 py-10">
         <div className="max-w-5xl mx-auto space-y-8">
 
@@ -145,13 +215,13 @@ const ContributionPage = () => {
                 {group.members.length} members participating
               </p>
             </div>
-            {/* ✅ SUCCESS MESSAGE (RHS) */}
-  {collectedAmount === totalAmount && totalAmount > 0 && (
-    <div className="text-green-600 font-semibold text-sm text-right ml-auto">
-      ✅ Total contribution completed <br />
-      Product will be ordered by the organizer
-    </div>
-  )}
+
+            {collectedAmount === totalAmount && totalAmount > 0 && (
+              <div className="text-green-600 font-semibold text-sm text-right ml-auto">
+                ✅ Total contribution completed <br />
+                Product will be ordered by the organizer
+              </div>
+            )}
           </div>
 
           {/* PROGRESS */}
@@ -189,7 +259,7 @@ const ContributionPage = () => {
                   return (
                     <tr key={c._id} className="border-b last:border-none">
                       <td className="py-3">{c.user.name}</td>
-                      <td>₹{c.amount}</td>
+                      <td>₹{perMemberAmount}</td>
 
                       <td>
                         <span
@@ -201,7 +271,6 @@ const ContributionPage = () => {
                         </span>
                       </td>
 
-                      {/* ✅ FIXED ACTION COLUMN */}
                       <td>
                         {isMe && c.status === "pending" && (
                           <button
@@ -225,8 +294,7 @@ const ContributionPage = () => {
 
                             <button
                               onClick={() => handleConfirmPayment(c._id)}
-                              className="bg-green-600 text-white px-1 py-1 rounded-2xl text-sm"
-
+                              className="bg-green-600 text-white px-2 py-1 rounded text-sm"
                             >
                               Confirm
                             </button>
@@ -254,59 +322,52 @@ const ContributionPage = () => {
         </div>
       </div>
 
-      {/* PAYMENT MODAL */}
+      {/* ================= PAYMENT MODAL ================= */}
       {showPaymentModal && selectedContribution && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl p-6 w-full max-w-md relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md relative">
+            <button
+              onClick={() => setShowPaymentModal(false)}
+              className="absolute top-3 right-3 text-gray-400"
+            >
+              ✕
+            </button>
 
-      {/* Close */}
-      <button
-        onClick={() => setShowPaymentModal(false)}
-        className="absolute top-3 right-3 text-gray-400"
-      >
-        ✕
-      </button>
+            <h2 className="text-lg font-semibold mb-4 text-center">
+              Complete Payment
+            </h2>
 
-      <h2 className="text-lg font-semibold mb-4 text-center">
-        Complete Payment
-      </h2>
+            <div className="flex justify-center mb-4">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                  `upi://pay?pa=${group.organizerUpi}&pn=Gift Organizer&am=${perMemberAmount}&cu=INR&tn=Gift Contribution`
+                )}`}
+                alt="UPI QR"
+                className="rounded-lg border"
+              />
+            </div>
 
-      {/* ✅ REAL QR CODE */}
-      <div className="flex justify-center mb-4">
-  <img
-    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      `upi://pay?pa=${group.organizerUpi}&pn=Gift Organizer&am=${selectedContribution.amount}&cu=INR&tn=Gift Contribution`
-    )}`}
-    alt="UPI QR"
-    className="rounded-lg border"
-  />
-</div>
+            <p className="text-center text-sm text-gray-600 mb-4">
+              Scan QR & pay <b>₹{perMemberAmount}</b>
+            </p>
 
-      <p className="text-center text-sm text-gray-600 mb-4">
-        Scan QR & pay <span className="font-semibold">₹{selectedContribution.amount}</span>
-      </p>
+            <input
+              type="text"
+              placeholder="Enter UPI Transaction ID"
+              className="border px-3 py-2 rounded w-full mb-4"
+              value={upiRef}
+              onChange={(e) => setUpiRef(e.target.value)}
+            />
 
-      {/* UPI Reference */}
-      <input
-        type="text"
-        placeholder="Enter UPI Transaction ID"
-        className="border px-3 py-2 rounded w-full mb-4"
-        value={upiRef}
-        onChange={(e) => setUpiRef(e.target.value)}
-      />
-
-      <button
-        onClick={handleMarkAsPaid}
-        className="bg-green-600 text-white w-full py-2 rounded-full"
-      >
-        Mark as Paid
-      </button>
-
-    </div>
-  </div>
-)}
-
-
+            <button
+              onClick={handleMarkAsPaid}
+              className="bg-green-600 text-white w-full py-2 rounded-full"
+            >
+              Mark as Paid
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 };

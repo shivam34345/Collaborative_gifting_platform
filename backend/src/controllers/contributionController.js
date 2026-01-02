@@ -105,6 +105,7 @@ const confirmPayment = async (req, res) => {
       return res.status(404).json({ message: "Group not found" });
     }
 
+    // 🔐 Only organizer can confirm
     if (group.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message: "Only organizer can confirm payments",
@@ -117,29 +118,53 @@ const confirmPayment = async (req, res) => {
       });
     }
 
+    const { amount } = req.body;
+
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({
+        message: "Invalid contribution amount",
+      });
+    }
+
+    // ✅ STORE ACTUAL PAID AMOUNT
+    contribution.amount = Number(amount);
     contribution.status = "confirmed";
     contribution.confirmedAt = new Date();
+
     await contribution.save();
 
-    res.json({ message: "Payment confirmed", contribution });
+    res.json({
+      message: "Payment confirmed",
+      contribution,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
+
 // ============================
 // GET MY TOTAL CONTRIBUTIONS
 // ============================
-const getMyTotalContributions = async (req, res) => {
+async function getMyTotalContributions(req, res) {
   try {
+    // ✅ Only confirmed contributions should count
     const contributions = await Contribution.find({
       user: req.user._id,
+      status: "confirmed",
     }).populate("group", "name");
 
     const grouped = {};
+    let total = 0;
+
     contributions.forEach((c) => {
-      const name = c.group?.name || "Unknown Group";
-      grouped[name] = (grouped[name] || 0) + c.amount;
+      const groupName = c.group?.name || "Unknown Group";
+
+      // 🔥 IMPORTANT: use ACTUAL amount paid
+      const amount = Number(c.amount) || 0;
+
+      grouped[groupName] = (grouped[groupName] || 0) + amount;
+      total += amount;
     });
 
     res.json({
@@ -148,12 +173,13 @@ const getMyTotalContributions = async (req, res) => {
         groupName,
         amount,
       })),
-      total: Object.values(grouped).reduce((a, b) => a + b, 0),
+      total,
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
-};
+}
+
 
 module.exports = {
   getGroupContributions,
