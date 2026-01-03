@@ -216,7 +216,7 @@ const ContributionPage = () => {
               </p>
             </div>
 
-            {collectedAmount === totalAmount && totalAmount > 0 && (
+            {collectedAmount >= totalAmount && totalAmount > 0 && (
               <div className="text-green-600 font-semibold text-sm text-right ml-auto">
                 ✅ Total contribution completed <br />
                 Product will be ordered by the organizer

@@ -346,6 +346,17 @@ const sendMessage = async () => {
                 <div key={gift._id} className="min-w-[240px] bg-white rounded-2xl shadow p-4">
                   <img src={gift.image} alt={gift.name} className="h-40 w-full object-cover rounded mb-3" />
                   <p className="font-semibold">{gift.name}</p>
+                   {/* ✅ VIEW PRODUCT LINK */}
+  {gift.link && (
+    <a
+      href={gift.link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sm text-blue-600 underline block mt-1"
+    >
+      View Product
+    </a>
+  )}
                   <p className="text-sm text-gray-500">👍 {gift.votes.length} votes</p>
 
                   <button
